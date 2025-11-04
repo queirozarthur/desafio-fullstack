@@ -1,26 +1,52 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common'; // 
 import { CreateFuncionarioDto } from './dto/create-funcionario.dto';
 import { UpdateFuncionarioDto } from './dto/update-funcionario.dto';
+import { InjectRepository } from '@nestjs/typeorm'; 
+import { Funcionario } from './entities/funcionario.entity'; 
+import { Repository } from 'typeorm'; 
 
 @Injectable()
 export class FuncionariosService {
-  create(createFuncionarioDto: CreateFuncionarioDto) {
-    return 'This action adds a new funcionario';
+  constructor(
+    @InjectRepository(Funcionario)
+    private funcionarioRepository: Repository<Funcionario>,
+  ) {}
+
+// 'CREATE' (CRIAR)
+  create(createFuncionarioDto: CreateFuncionarioDto): Promise<Funcionario> {
+    const funcionario = this.funcionarioRepository.create(createFuncionarioDto);
+    return this.funcionarioRepository.save(funcionario);
   }
 
-  findAll() {
-    return `This action returns all funcionarios`;
+  //'READ' (LER TODOS)
+  findAll(): Promise<Funcionario[]> {
+    return this.funcionarioRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} funcionario`;
+//'READ' (LER SÓ UM)
+async findOne(id: number): Promise<Funcionario> {
+  const funcionario = await this.funcionarioRepository.findOneBy({ id: id });
+
+  if (!funcionario) {
+    throw new NotFoundException(`Funcionário com o ID ${id} não encontrado`);
   }
 
-  update(id: number, updateFuncionarioDto: UpdateFuncionarioDto) {
-    return `This action updates a #${id} funcionario`;
+  return funcionario;
+}
+  //'UPDATE' (ATUALIZAR)
+  async update(id: number, updateFuncionarioDto: UpdateFuncionarioDto): Promise<Funcionario> {
+    const funcionario = await this.funcionarioRepository.preload({
+      id: id,
+      ...updateFuncionarioDto,
+    });
+    if (!funcionario) {
+      throw new Error('Funcionário não encontrado');
+    }
+    return this.funcionarioRepository.save(funcionario);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} funcionario`;
+//'DELETE' (DELETAR)
+  async remove(id: number): Promise<void> {
+    await this.funcionarioRepository.delete(id); 
   }
 }
